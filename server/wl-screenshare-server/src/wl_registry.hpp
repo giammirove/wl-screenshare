@@ -1,0 +1,1 @@
+extern const struct wl_registry_listener registry_listener;

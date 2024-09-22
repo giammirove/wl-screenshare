@@ -1,0 +1,6 @@
+<resources>
+    <string name="app_name">Wiredmon</string>
+    <string name="h264">H264</string>
+    <string name="h265">H265</string>
+
+</resources>

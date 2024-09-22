@@ -1,0 +1,25 @@
+# Compiled sibs files
+sibs-build/
+compile_commands.json
+tests/sibs-build/
+tests/compile_commands.json
+
+external/wlr-export-dmabuf-unstable-v1-client-protocol.h
+external/wlr-export-dmabuf-unstable-v1-protocol.c
+
+.clangd/
+.cache/
+.vscode/
+
+build/
+
+*.o
+gpu-screen-recorder
+gsr-kms-server
+
+*.mp4
+*.flv
+*.mkv
+*.mov
+*.webm
+*.ts

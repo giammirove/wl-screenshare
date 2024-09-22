@@ -1,0 +1,28 @@
+[Unit]
+Description=GPU Screen Recorder Service
+
+[Service]
+EnvironmentFile=-%h/.config/gpu-screen-recorder.env
+Environment=WINDOW=screen
+Environment=CONTAINER=mp4
+Environment=QUALITY=very_high
+Environment=CODEC=auto
+Environment=AUDIO_CODEC=opus
+Environment=AUDIO_DEVICE=default_output
+Environment=SECONDARY_AUDIO_DEVICE=
+Environment=FRAMERATE=60
+Environment=REPLAYDURATION=30
+Environment=OUTPUTDIR=%h/Videos
+Environment=MAKEFOLDERS=no
+Environment=COLOR_RANGE=limited
+Environment=KEYINT=2
+Environment=ENCODER=gpu
+Environment=RESTORE_PORTAL_SESSION=yes
+Environment=ADDITIONAL_ARGS=
+ExecStart=gpu-screen-recorder -v no -w "${WINDOW}" -c "${CONTAINER}" -q "${QUALITY}" -k "${CODEC}" -ac "${AUDIO_CODEC}" -a "${AUDIO_DEVICE}" -a "${SECONDARY_AUDIO_DEVICE}" -f "${FRAMERATE}" -r "${REPLAYDURATION}" -o "${OUTPUTDIR}" -df "${MAKEFOLDERS}" $ADDITIONAL_ARGS -cr "${COLOR_RANGE}" -keyint "${KEYINT}" -restore-portal-session "${RESTORE_PORTAL_SESSION}" -encoder "${ENCODER}"
+KillSignal=SIGINT
+Restart=on-failure
+RestartSec=5s
+
+[Install]
+WantedBy=default.target

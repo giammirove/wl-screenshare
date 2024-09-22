@@ -1,0 +1,166 @@
+Check for reparent.
+Quickly changing workspace and back while recording under i3 breaks the screen recorder. i3 probably unmaps windows in other workspaces.
+See https://trac.ffmpeg.org/wiki/EncodingForStreamingSites for optimizing streaming.
+Look at VK_EXT_external_memory_dma_buf.
+Allow setting a different output resolution than the input resolution.
+Use mov+faststart.
+Allow recording all monitors/selected monitor without nvfbc by recording the compositor proxy window and only recording the part that matches the monitor(s).
+Allow recording a region by recording the compositor proxy window / nvfbc window and copying part of it.
+Support amf and qsv.
+Disable flipping on nvidia? this might fix some stuttering issues on some setups. See NvCtrlGetAttribute/NvCtrlSetAttributeAndGetStatus NV_CTRL_SYNC_TO_VBLANK https://github.com/NVIDIA/nvidia-settings/blob/d5f022976368cbceb2f20b838ddb0bf992f0cfb9/src/gtk%2B-2.x/ctkopengl.c.
+Replays seem to have some issues with audio/video. Why?
+Cleanup unused gl/egl functions, macro, etc.
+Add option to disable overlapping of replays (the old behavior kinda. Remove the whole replay buffer data after saving when doing this).
+Set audio track name to audio device name (if not merge of multiple audio devices).
+Add support for webcam, but only really for amd/intel because amd/intel can get drm fd access to webcam, nvidia cant. This allows us to create an opengl texture directly from the webcam fd for optimal performance.
+Reverse engineer nvapi so we can disable "force p2 state" on linux too (nvapi profile api with the settings id 0x50166c5e).
+Support yuv444p on amd/intel.
+fix yuv444 for hevc.
+Do not allow streaming if yuv444.
+Re-enable yuv444 and allow yuv444 for software encoding. Good for remote desktop. But for remote desktop its more ideal to use yuv420 and when the image is not moving then send a png image instead, for clear image when the image is static.
+Support 10 bit output because of better gradients. May even be smaller file size. Better supported on hevc (not supported at all on h264 on my gpu).
+Add nvidia/(amd/intel) specific install script for ubuntu. User should run install_ubuntu.sh but it should run different install dep script depending on if /proc/driver/nvidia/version exists or not. But what about switchable graphics setup?
+Test different combinations of switchable graphics. Intel hybrid mode (running intel but possible to run specific applications with prime-run), running pure intel. Detect switchable graphics.
+
+https://web.archive.org/web/20210306020203/https://forums.developer.nvidia.com/t/performance-power-management-problem-on-shared-vgpu/161986
+https://djdallmann.github.io/GamingPCSetup/CONTENT/RESEARCH/FINDINGS/registrykeys_displayadapter_class_4d36e968-e325-11ce-bfc1-08002be10318.txt
+
+The video output will be black if if the system is suspended on nvidia and NVreg_PreserveVideoMemoryAllocations is not set to 1. This happens because I think that the driver invalidates textures/cuda buffers? To fix this we could try and recreate gsr capture when gsr_capture_capture fails (with timeout to retry again).
+
+NVreg_RegistryDwords.
+Window capture doesn't work properly in _control_ game after going from pause menu to in-game (and back to pause menu). There might be some x11 event we need to catch. Same for vr-video-player.
+
+Monitor capture on steam deck is slightly below the game fps, but only when capturing on the steam deck screen. If capturing on another monitor, there is no issue.
+    Is this related to the dma buf rotation issue? different modifier being slow? does this always happen?
+
+Fallback to vaapi copy in kms if opengl version fails. This can happen on steam deck for some reason (driver bug?). Also vaapi copy uses less gpu since it uses video codec unit to copy.
+Test if vaapi copy version uses less memory than opengl version.
+
+Intel is a bit weird with monitor capture and multiple monitors. If one of the monitors is rotated then all the kms will be rotated as well.
+    Is that only the case when the primary monitor is rotated? Also the primary monitor becomes position 0, 0 so crtc (x11 randr) position doesn't match the drm pos. Maybe get monitor position and size from drm instead.
+    How about if multiple monitors are rotated?
+
+Support screen (all monitors) capture on amd/intel and nvidia wayland when no combined plane is found. Right now screen just takes the first output.
+Use separate plane (which has offset and pitch) from combined plane instead of the combined plane.
+
+Both twitch and youtube support variable bitrate but twitch recommends constant bitrate to reduce stream buffering/dropped frames when going from low motion to high motion: https://help.twitch.tv/s/article/broadcasting-guidelines?language=en_US. Info for youtube: https://support.google.com/youtube/answer/2853702?hl=en#zippy=%2Cvariable-bitrate-with-custom-stream-keys-in-live-control-room%2Ck-p-fps%2Cp-fps.
+
+On nvidia some games apparently causes the game to appear to stutter (without dropping fps) when recording a monitor but not using
+    when using direct screen capture. Observed in Deus Ex and Apex Legends.
+
+Capture is broken on amd on wlroots. It's disabled at the moment and instead uses kms capture. Find out why we get a black screen in wlroots.
+
+Support vulkan video encoding. That might workaround forced p2 state nvidia driver "bug". Ffmpeg supports vulkan video encoding if it's encoding with --enable-vulkan
+
+It may be possible to improve color conversion rgb->yuv shader for color edges by biasing colors to an edge, instead of letting color overlaying with bilinear filtering handle it.
+
+When webcam is supported mention that nvidia_drm.modeset=1 must be set on nvidia x11 (it's required on wayland so it's not needed there. Or does eglstream work without it??). Check if this really is the case.
+  Support green screen removal, cropping, shader effects in general (circle mask, rounded corners, etc).
+
+Preset is set to p5 for now but it should ideally be p6 or p7.
+    This change is needed because for certain sizes of a window (or monitor?) such as 971x780 causes encoding to freeze
+    when using h264 codec. This is a new(?) nvidia driver bug.
+    Maybe dont choose p6 or p7 again? it causes micro stutter for some users (?).
+
+For low latency, see https://developer.download.nvidia.com/compute/nvenc/v4.0/NVENC_VideoEncoder_API_ProgGuide.pdf (section 7.1).
+Remove follow focused option.
+
+Exit if X11/Wayland killed (if drm plane dead or something?)
+
+Use SRC_W and SRC_H for screen plane instead of crtc_w and crtc_h.
+
+Make it possible to select which /dev/dri/card* to use, but that requires opengl to also use the same card. Not sure if that is possible for amd, intel and nvidia without using vulkan instead.
+
+Test if p2 state can be worked around by using pure nvenc api and overwriting cuInit/cuCtxCreate* to not do anything. Cuda might be loaded when using nvenc but it might not be used, with certain record options? (such as h264 p5).
+    nvenc uses cuda when using b frames and rgb->yuv conversion, so convert the image ourselves instead.-
+
+Mesa doesn't support global headers (AV_CODEC_FLAG_GLOBAL_HEADER) with h264... which also breaks mkv since mkv requires global header. Right now gpu screen recorder will forcefully set video codec to hevc when h264 is requested for mkv files.
+
+Drop frames if live streaming cant keep up with target fps, or dynamically change resolution/quality.
+
+Support low power option (does it even work with vaapi in ffmpeg??). Would be very useful for steam deck.
+
+Instead of sending a big list of drm data back to kms client, send the monitor we want to record to kms server and the server should respond with only the matching monitor, and cursor.
+
+Tonemap hdr to sdr when hdr is enabled and when hevc_hdr/av1_hdr is not used.
+
+Add 10 bit record option, h264_10bit, hevc_10bit and av1_10bit.
+
+Rotate cursor texture properly (around top left origin).
+
+Setup hardware video context so we can query constraints and capabilities for better default and better error messages.
+
+Use CAP_SYS_NICE in flatpak too on the main gpu screen recorder binary. It makes recording smoother, especially with constant framerate.
+
+Modify ffmpeg to accept opengl texture for nvenc encoding. Removes extra buffers and copies.
+
+When vulkan encode is added, mention minimum nvidia driver required. (550.54.14?).
+
+Support drm plane rotation. Neither X11 nor any Wayland compositor currently rotates drm planes so this might not be needed.
+
+Investigate if there is a way to do gpu->gpu copy directly without touching system ram to enable video encoding on a different gpu. On nvidia this is possible with cudaMemcpyPeer, but how about from an intel/amd gpu to an nvidia gpu or the other way around or any combination of iGPU and dedicated GPU?
+    Maybe something with clEnqueueMigrateMemObjects? on AMD something with DirectGMA maybe?
+
+Go back to using pure vaapi without opengl for video encoding? rotation (transpose) can be done if its done after (rgb to yuv) color conversion.
+
+Implement scaling and use lanczos resampling for better quality. Lanczos resampling can also be used for YUV chroma for better color quality on small text.
+
+Flac is disabled because the frame sizes are too large which causes big audio/video desync.
+
+Add 10-bit capture option. This is good because it reduces banding and quality in very dark areas while reducing the file size compared to doing the same thing with 8-bits.
+
+Enable b-frames.
+
+Support vfr matching games exact fps all the time. On x11 use damage tracking, on wayland? maybe there is drm plane damage tracking. But that may not be accurate as the compositor may update it every monitor hz anyways. On wayland maybe only support it for desktop portal + pipewire capture.
+    Another method to track damage that works regardless of the display server would be to do a diff between frames with a shader.
+
+Support selecting which gpu to use. This can be done in egl with eglQueryDevicesEXT and then eglGetPlatformDisplayEXT. This will automatically work on AMD and Intel as vaapi uses the same device. On nvidia we need to use eglQueryDeviceAttribEXT with EGL_CUDA_DEVICE_NV.
+    Maybe on glx (nvidia x11 nvfbc) we need to use __NV_PRIME_RENDER_OFFLOAD, __NV_PRIME_RENDER_OFFLOAD_PROVIDER, __GLX_VENDOR_LIBRARY_NAME, __VK_LAYER_NV_optimus, VK_ICD_FILENAMES instead. Just look at prime-run /usr/bin/prime-run.
+
+When adding support for steam deck, add option to send video to another computer.
+New gpu screen recorder gui should have the option to cut the video directly, maybe running an ffmpeg command or implementing that ourselves. Only support gpu screen recorder video files.
+
+Check if is software renderer by using eglQueryDisplayAttribEXT(egl_display, EGL_DEVICE_EXT..) eglQueryDeviceStringEXT(egl_device, EGL_EXTENSIONS) and check for "EGL_MESA_device_software".
+
+Use MapTexture2DINTEL for software encoding on intel.
+
+To test vulkan encode on amd set the environment variable RADV_PERFTEST=video_encode before running a program that uses vulkan encode (or queries for it, such as vulkaninfo).
+
+Support hevc/av1 for software encoder and hdr support at the same time. Need support for yuv420p shader for that. Use libx265 for hevc and libsvtav1 for av1 (libsvtav1 is the fastest software av1 video encoder). Also support vp8/vp9 since we are not limited by hardware.
+
+Cleanup pipewire code and add more error checks.
+
+Make dbus code and pipewire setup non blocking.
+
+Support portal (pipewire) hdr capture when pipewire adds support for it. Maybe use the result of SelectSources and then query the hdr metadata with drm.
+
+HDR support on x11?
+
+Move most kms data to kms client. We dont need root access for everything that is server from kms server right now, such as hdr metadata and drm plane properties. Only the drm plane fd really needs root access.
+
+Show rotated window size in monitor list when using incorrect monitor name.
+
+Desktop portal capture on kde plasma makes notifications not show up unless the notification is set as urgent. How to fix this? do we have to make our own notification system?
+
+Explicit sync is done with the drm property IN_FENCE_FD (see https://drmdb.emersion.fr/properties/4008636142/IN_FENCE_FD). Check if this needs to be used on wayland (especially on nvidia) when capturing a monitor directly without desktop portal.
+
+The update fps appear to be lower when recording a monitor instead of using portal on intel. Does this reflect in game framerate?
+
+Fix glitches when using prime-run with desktop portal. It happens when moving a window around. It's probably a syncing issue.
+
+Allow prime-run on x11 if monitor capture and the prime gpu is not nvidia.
+
+Enable 2-pass encoding.
+
+Add cbr option.
+
+Restart replay/update video resolution if monitor resolution changes.
+
+Fix pure vaapi copy on intel.
+
+ffmpeg supports vulkan encoding now (h264!). Doesn't work on amd yet because mesa is missing VK_KHR_video_maintenance1, see https://gitlab.freedesktop.org/mesa/mesa/-/issues/11857. Test on nvidia!
+
+Test vaapi low latency mode (setenv("AMD_DEBUG", "lowlatencyenc", true);), added in mesa 24.1.4, released on july 17, 2024. Note that this forces gpu power usage to max at all times, even when recording at 2 fps.
+Use nvidia low latency options for better encoding times.
+
+Test ideal async_depth value. Increasing async_depth also increased gpu memory usage a lot (from 100mb to 500mb when moving from async_depth 2 to 16) at 4k resolution. Setting it to 8 increases it by 200mb which might be ok.
